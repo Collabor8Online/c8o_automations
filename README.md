@@ -6,6 +6,8 @@ This module allows you to define "automations" (think [IFTTT](https://ifttt.com)
 
 We use Automations at Collabor8Online to allow user-defined actions to take place in response to various "triggers".
 
+(Also note that this gem was developed for use by us.  We're sharing it in case others find it useful, but depending upon demand, it may not be a true "community" project.  Finally note that currently it's licensed under the [LGPL](/LICENSE) which may make it unsuitable for some - contact us if you'd like to know about options).
+
 ## Types of Automation
 
 Automations fall in to two categories - ScheduledAutomations and Triggers.
