@@ -27,6 +27,7 @@ module Automations
     end
 
     def configuration= value
+      Automations::Configuration.verify value
       self.configuration_data = value.to_h
       self.configuration_class_name = value.class.name
     end

@@ -26,6 +26,7 @@ module Automations
     end
 
     def handler= value
+      Automations::Handler.verify value
       self.handler_class_name = value.nil? ? "" : value.class.name
       self.configuration_data = value&.to_h || {}
       @handler = value

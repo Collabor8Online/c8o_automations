@@ -3,6 +3,7 @@ require "automations/engine"
 require "automations/core_ext"
 
 module Automations
+  require_relative "automations/types"
   require_relative "automations/validations"
   require_relative "automations/daily_schedule"
   require_relative "automations/weekly_schedule"

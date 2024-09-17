@@ -12,8 +12,8 @@ Gem::Specification.new do |spec|
   spec.metadata["allowed_push_host"] = "https://gems.c8online.net"
 
   spec.metadata["homepage_uri"] = spec.homepage
-  spec.metadata["source_code_uri"] = "https://github.com/collabor8online/c8o2"
-  spec.metadata["changelog_uri"] = "https://github.com/collabor8online/c8o2"
+  spec.metadata["source_code_uri"] = "https://github.com/collabor8online/c8o_automations"
+  spec.metadata["changelog_uri"] = "https://github.com/collabor8online/c8o_automations"
 
   spec.files = Dir.chdir(File.expand_path(__dir__)) do
     Dir["{app,config,db,lib}/**/*", "Rakefile", "README.md", "LICENCE"]
@@ -21,4 +21,5 @@ Gem::Specification.new do |spec|
 
   spec.add_dependency "rails", ">= 7.1.3.4"
   spec.add_dependency "acts_as_list", ">= 1.1.0"
+  spec.add_dependency "standard-procedure-plumbing"
 end

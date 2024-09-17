@@ -4,6 +4,9 @@ module Automations
   RSpec.describe Action, type: :model do
     # standard:disable Lint/ConstantDefinitionInBlock
     class SomeHandler < Struct.new(:data, keyword_init: true)
+      def accepts?(**) = true
+
+      def call = nil
     end
     # standard:enable Lint/ConstantDefinitionInBlock
 
@@ -46,6 +49,12 @@ module Automations
 
         expect(@action.handler_class_name).to eq "Automations::SomeHandler"
         expect(@action.configuration_data).to eq({data: "something_else"})
+      end
+
+      it "does not allow handlers to be saved if they do not respond to #accepts?, #call, #to_s and #to_h" do
+        @bad_handler = Object.new
+
+        expect { Action.new handler: @bad_handler }.to raise_error TypeError
       end
     end
 

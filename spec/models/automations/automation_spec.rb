@@ -4,12 +4,11 @@ module Automations
   RSpec.describe Automation, type: :model do
     # standard:disable Lint/ConstantDefinitionInBlock
     class SomeStruct < Struct.new(:this, :that, keyword_init: true)
+      def ready?(**params) = true
     end
 
-    class Configuration < Struct.new(:are_you_ready, keyword_init: true)
-      def ready?(**params)
-        are_you_ready
-      end
+    class AreYouReady < Struct.new(:are_you_ready, keyword_init: true)
+      def ready?(**params) = are_you_ready
     end
 
     class BeforeTriggerSaysNo
@@ -96,6 +95,12 @@ module Automations
 
         expect(@automation.configuration).to eq Automations::SomeStruct.new(this: "this", that: "that")
       end
+
+      it "does not allow configurations to be saved if they do not have a #ready?, #to_h and #to_s method defined" do
+        @bad_config = Object.new
+
+        expect { Automation.new(configuration: @bad_config) }.to raise_error(TypeError)
+      end
     end
 
     context "#before_trigger" do
@@ -110,14 +115,14 @@ module Automations
 
     context "#call" do
       it "does nothing if the configuration is not ready to trigger" do
-        @automation = Automation.new configuration_class_name: "Automations::Configuration", configuration_data: {are_you_ready: false}
+        @automation = Automation.new configuration_class_name: "Automations::AreYouReady", configuration_data: {are_you_ready: false}
         expect(@automation).to_not receive(:trigger_actions)
 
         expect(@automation.call(some: "values")).to be_nil
       end
 
       it "does nothing if a before_trigger is defined and returns false" do
-        @automation = Automation.new configuration_class_name: "Automations::Configuration", before_trigger_class_name: "Automations::BeforeTriggerSaysNo", configuration_data: {are_you_ready: true}
+        @automation = Automation.new configuration_class_name: "Automations::AreYouReady", before_trigger_class_name: "Automations::BeforeTriggerSaysNo", configuration_data: {are_you_ready: true}
 
         expect(@automation).to_not receive(:trigger_actions)
 
@@ -125,14 +130,14 @@ module Automations
       end
 
       it "triggers actions if the configuration says it is ready" do
-        @automation = Automation.new configuration_class_name: "Automations::Configuration", configuration_data: {are_you_ready: true}
+        @automation = Automation.new configuration_class_name: "Automations::AreYouReady", configuration_data: {are_you_ready: true}
 
         expect(@automation).to receive(:trigger_actions).with(say: "Hello").and_return({greeting: "Hello Alice"})
         expect(@automation.call(say: "Hello")).to eq({greeting: "Hello Alice"})
       end
 
       it "triggers actions if the configuration says it is ready and the before_trigger hook returns true" do
-        @automation = Automation.new configuration_class_name: "Automations::Configuration", before_trigger_class_name: "Automations::BeforeTriggerSaysYes", configuration_data: {are_you_ready: true}
+        @automation = Automation.new configuration_class_name: "Automations::AreYouReady", before_trigger_class_name: "Automations::BeforeTriggerSaysYes", configuration_data: {are_you_ready: true}
 
         expect(@automation).to receive(:trigger_actions).with(say: "Hello").and_return({greeting: "Hello Alice"})
         expect(@automation.call(say: "Hello")).to eq({greeting: "Hello Alice"})
@@ -144,7 +149,7 @@ module Automations
         @first = double("Action", accepts?: true)
         @second = double("Action", accepts?: true)
 
-        @automation = Automation.new configuration_class_name: "Automations::Configuration", configuration_data: {are_you_ready: true}
+        @automation = Automation.new configuration_class_name: "Automations::AreYouReady", configuration_data: {are_you_ready: true}
         allow(@automation).to receive(:actions).and_return [@first, @second]
 
         expect(@first).to receive(:call).with(some: "params").and_return(some: "params")
@@ -157,7 +162,7 @@ module Automations
         @first = double("Action", accepts?: true)
         @second = double("Action", accepts?: false)
 
-        @automation = Automation.new configuration_class_name: "Automations::Configuration", configuration_data: {are_you_ready: true}
+        @automation = Automation.new configuration_class_name: "Automations::AreYouReady", configuration_data: {are_you_ready: true}
         allow(@automation).to receive(:actions).and_return [@first, @second]
 
         expect(@first).to receive(:call).with(some: "params").and_return(some: "params")
@@ -170,7 +175,7 @@ module Automations
         @first = double("Action", accepts?: true)
         @second = double("Action", accepts?: true)
 
-        @automation = Automation.new configuration_class_name: "Automations::Configuration", configuration_data: {are_you_ready: true}
+        @automation = Automation.new configuration_class_name: "Automations::AreYouReady", configuration_data: {are_you_ready: true}
         allow(@automation).to receive(:actions).and_return [@first, @second]
 
         expect(@first).to receive(:call).with(some: "params").and_return(extra: "data")
@@ -183,7 +188,7 @@ module Automations
         @first = double("Action", accepts?: true)
         @second = double("Action", accepts?: true)
 
-        @automation = Automation.new configuration_class_name: "Automations::Configuration", configuration_data: {are_you_ready: true}
+        @automation = Automation.new configuration_class_name: "Automations::AreYouReady", configuration_data: {are_you_ready: true}
         allow(@automation).to receive(:actions).and_return [@first, @second]
 
         allow(@first).to receive(:call).with(some: "params").and_return(extra: "data")
@@ -196,7 +201,7 @@ module Automations
     context "#add_action" do
       it "adds an action to the end of the list" do
         @container = Automatable.create! name: "My container"
-        @automation = Automation.create! container: @container, name: "Automation", configuration_class_name: "Automations::Configuration", configuration_data: {are_you_ready: true}
+        @automation = Automation.create! container: @container, name: "Automation", configuration_class_name: "Automations::AreYouReady", configuration_data: {are_you_ready: true}
 
         @first_action = @automation.add_action "First action", handler: RespondsWithGreeting.new(greeting: "Hello")
         expect(@first_action).to be_kind_of Action
