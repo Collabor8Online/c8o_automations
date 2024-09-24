@@ -13,12 +13,10 @@ module Automations
 
     def container = automation.container
 
-    def accepts? **params
-      handler.accepts? container: container, automation: automation, action: self, **params
-    end
-
     def call **params
       params.merge handler.call(container: container, automation: automation, action: self, **params)
+    rescue
+      nil
     end
 
     def handler

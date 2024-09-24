@@ -4,11 +4,11 @@ module Automations
   RSpec.describe Automation, type: :model do
     # standard:disable Lint/ConstantDefinitionInBlock
     class SomeStruct < Struct.new(:this, :that, keyword_init: true)
-      def ready?(**params) = true
+      def call(**params) = true
     end
 
     class AreYouReady < Struct.new(:are_you_ready, keyword_init: true)
-      def ready?(**params) = are_you_ready
+      def call(**params) = are_you_ready
     end
 
     class BeforeTriggerSaysNo
@@ -20,14 +20,10 @@ module Automations
     end
 
     class RespondsWithGreeting < Struct.new(:greeting, keyword_init: true)
-      def accepts?(**params) = true
-
       def call(**params) = {greeting: "#{greeting} #{params[:name]}"}
     end
 
     class SwearsLoudly < Struct.new(:expletive, keyword_init: true)
-      def accepts?(**params) = true
-
       def call(**params) = {response: expletive.to_s}
     end
     # standard:enable Lint/ConstantDefinitionInBlock
@@ -96,7 +92,7 @@ module Automations
         expect(@automation.configuration).to eq Automations::SomeStruct.new(this: "this", that: "that")
       end
 
-      it "does not allow configurations to be saved if they do not have a #ready?, #to_h and #to_s method defined" do
+      it "does not allow configurations to be saved if they do not have a #call, #to_h and #to_s method defined" do
         @bad_config = Object.new
 
         expect { Automation.new(configuration: @bad_config) }.to raise_error(TypeError)
@@ -114,13 +110,6 @@ module Automations
     end
 
     context "#call" do
-      it "does nothing if the configuration is not ready to trigger" do
-        @automation = Automation.new configuration_class_name: "Automations::AreYouReady", configuration_data: {are_you_ready: false}
-        expect(@automation).to_not receive(:trigger_actions)
-
-        expect(@automation.call(some: "values")).to be_nil
-      end
-
       it "does nothing if a before_trigger is defined and returns false" do
         @automation = Automation.new configuration_class_name: "Automations::AreYouReady", before_trigger_class_name: "Automations::BeforeTriggerSaysNo", configuration_data: {are_you_ready: true}
 

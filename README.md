@@ -50,12 +50,12 @@ end
 By themselves, automations do very little.  They are governed by their configurations.
 
 A configuration can be any class that:
-- takes a set of keyword arguments in its constructor - `def initialize(**configuration_data)`
+- takes a set of keyword arguments in its constructor - `def initialize(first: "some value", second: "other value")`
 - has a `to_h` method that can be used to extract the parameters needed to reconstruct the object later
-- has a `ready?(**params)` method
+- has a `call(**params)` method that returns true if the automation should be triggered
 - has a `to_s` method that returns a summary of the configuration
 
-The constructor will receive any configuration data required.  The `ready?` method will receive the data that was used to trigger the automation.
+The constructor will receive any configuration data required.  The `#call` method will receive the data that was used to trigger the automation.
 
 ScheduledAutomations are triggered at a time.  Therefore the [DailySchedule](lib/automations/daily_schedule.rb) uses an array of `days` and `times` to configure when it should be triggered.
 
@@ -67,23 +67,25 @@ Then, when the automation is triggered (for example, by an hourly cron job), the
 
 ```ruby
 # automation
-configuration.ready?(time: Time.now)
+configuration.call(time: Time.now)
 ```
 
 The DailySchedule then checks to see if it's currently between 8am and 9am and returns true or false accordingly.  If true, the automation then triggers its actions.
 
-Triggers can be triggered by any event within your application.  So instead of a time, the parameters passed to the configuration are `event` and `data`.  The [EventNameFilter](lib/automations/event_name_filter.rb) looks at the event parameter and returns true if it is included in its list.  However, it is likely that you will need to write your own configurations to deal with the various triggers that could happen within your application.
+Triggers can be fired by any event within your application.  So instead of a time, the parameters passed to the configuration are application-specific.  The [EventNameFilter](lib/automations/event_name_filter.rb) expects a string "event_name" parameter and a "data" parameter (which matches an observer from the plumbing gem).  The filter looks at the event name and returns true if it is included in its list.  However, in most cases, you will need to write your own configurations to deal with the various triggers that could happen within your application.
 
 ### Custom configurations
 
-As mentioned, a configuration class must take keyword parameters in its constructor and have a `ready?` method that returns a boolean.
+As mentioned, a configuration class must take keyword parameters in its constructor and have a `call` method that returns a boolean.
 
 The easiest way to do this is to define a ruby `Struct` with the `keyword_init: true` parameter.
 
 ```ruby
 class SpamEmailReceived < Struct.new(:blacklisted_domains, keyword_init: true)
 
-  def ready? event:, data:
+  def call input
+	  event = input[:event]
+		data = input[:data]
     return false unless event == "email_received"
   	domain = data[:email].from.split("@").last
   	blacklisted_domains.include? domain
@@ -105,13 +107,10 @@ However, just like automations which rely on their configurations, actions do no
 A handler can be any class that:
 - takes a set of keyword arguments in its constructor - `def initialize(**configuration_data)`
 - has a `to_h` method that can be used to extract the parameters needed to reconstruct the object later
-- has a `accepts?(**params)` method to answer whether the action can be performed when given those parameters
 - has a `call(**params)` method to actually perform the action
 - has a `to_s` method that returns a summary of the handler
 
-The `accepts?` method takes the incoming parameters and must respond with true or false (to say whether this handler will run).
-
-`call` takes those same parameters and is expected to perform its actions, returning a hash.
+`call` takes those same parameters and is expected to perform its actions, returning a hash.  If it raises an exception, the exception is ignored and no results are passed on to the next action in the automation.
 
 The automation triggers each action (and hence its handler) in sequence, passing in some parameters at the start.  As each action is triggered, it can then modify or add to those parameters, which are then passed on to the next action in the sequence.  The parameters provided are merged with the results of the action and the combination is passed on to the next action in the sequence.  So an action can either pass on the input data unchanged, it can add new items to the data, which are then given to the next action, or it can override some of the existing data.
 
@@ -123,8 +122,8 @@ So the trigger is configured something like this:
 
 ```ruby
 class DocumentAddedToFolder < Struct.new(:upload_folder_id, keyword_init: true)
-	def ready? event:, data:
-		(event == "document_added_to_folder") && (data.folder.id == upload_folder_id)
+	def call input
+		(input[:event] == "document_added_to_folder") && (input[:data].folder.id == upload_folder_id)
 	end
 end
 ```
@@ -135,11 +134,19 @@ The first action moves the documents to the "Approvals" folder.
 
 ```ruby
 class MoveDocumentsAcross < Struct.new(:folder_name, keyword_init: true)
-	def accepts? container:, automation:, action:, user:, folder:, documents:
-		folder.has_sibling? folder_name
+	include Plumbing::Pipeline
+
+	pre_condition :must_have_sibling_folder do |input|
+		input[:folder].has_sibling? folder_name
 	end
 
-	def call container:, automation:, action:, user:, folder:, documents:
+	perform :move_document
+
+	private
+
+	def move_document input
+	  folder = input[:folder]
+		documents = input[:documents]
 	  destination_folder = folder.find_sibling folder_name
 	  documents.each { |document| document.move_to destination_folder }
 	  { folder: destination_folder }
@@ -153,17 +160,29 @@ The next action starts an approval task for these documents.
 
 ```ruby
 class StartTask < Struct.new(:workflow_template_name, :email_addresses, keyword_init: true)
-	def accepts? container:, automation:, action:, user:, folder:, documents:
-		container.workflow_templates.find_by(name: workflow_template_name).present?
+	include Plumbing::Pipeline
+
+	pre_condition :must_have_workflow_template do |input|
+		input[:project].workflow_templates.find_by(name: input[:workflow_template_name]).present?
 	end
 
-	def call container:, automation:, action:, user:, folder:, documents:
-		workflow_template = container.workflow_templates.find_by(name: workflow_template_name)
-		assignees = container.project_members.where(email: email_addresses)
+	perform :start_task
+
+	private
+
+	def start_task input
+	  project = input[:project]
+		folder = input[:folder]
+		workflow_template_name = input[:workflow_template_name]
+		workflow_template = project.workflow_templates.find_by(name: workflow_template_name)
+		assignees = project.project_members.where(email: email_addresses)
+		documents = input[:documents]
+		user = input[:user]
+
 		workflow_task = workflow_template.start_task_in folder, documents: documents, assignees: assignees, created_by: user
 		{ workflow_task: workflow_task }
 	end
 end
 ```
 
-This checks that the container (a Project in the application) has a WorkflowTemplate with the correct name.  If so, it then finds that template, finds the people that the new task will be assigned to, then creates the task, attaching the documents in question.  Finally, it returns the newly created task, so any subsequent actions can reference it.
+This checks that the Project has a WorkflowTemplate with the correct name.  If so, it then finds that template, finds the people that the new task will be assigned to, then creates the task, attaching the documents in question.  Finally, it returns the newly created task, so any subsequent actions can reference it.

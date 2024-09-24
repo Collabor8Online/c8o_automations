@@ -1,3 +1,4 @@
+require "plumbing"
 require "automations/version"
 require "automations/engine"
 require "automations/core_ext"

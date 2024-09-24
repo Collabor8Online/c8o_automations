@@ -39,39 +39,44 @@ RSpec.describe Automations::AnnualSchedule do
     end
   end
 
-  context "#ready?" do
+  context "#call" do
+    it "must be supplied with a time" do
+      @schedule = Automations::DailySchedule.new days: [5], times: [11]
+      expect { @schedule.call(some: "data") }.to raise_error(Plumbing::PreConditionError)
+    end
+
     it "is ready if the month, day and time match" do
       @schedule = Automations::AnnualSchedule.new months: [9], days: [28], times: [11]
       Timecop.travel Time.new(2024, 9, 28, 11, 0) do # Saturday, 28th September 2024, 11:00
-        expect(@schedule.ready?(time: Time.now)).to be true
+        expect(@schedule.call(time: Time.now)).to be true
       end
     end
 
     it "is ready if the month and day match and the time is within the following hour" do
       @schedule = Automations::AnnualSchedule.new months: [9], days: [28], times: [11]
       Timecop.travel Time.new(2024, 9, 28, 11, 45) do # Saturday, 28th September 2024, 11:45
-        expect(@schedule.ready?(time: Time.now)).to be true
+        expect(@schedule.call(time: Time.now)).to be true
       end
     end
 
     it "is not ready if the month does not match and the day and time match" do
       @schedule = Automations::AnnualSchedule.new months: [10, 11], days: [28], times: [11]
       Timecop.travel Time.new(2024, 9, 28, 11, 0) do # Saturday, 28th September 2024, 11:00
-        expect(@schedule.ready?(time: Time.now)).to be false
+        expect(@schedule.call(time: Time.now)).to be false
       end
     end
 
     it "is not ready if the day does not match and the month and time match" do
       @schedule = Automations::AnnualSchedule.new months: [9], days: [29], times: [11]
       Timecop.travel Time.new(2024, 9, 28, 11, 0) do # Saturday, 28th September 2024, 11:00
-        expect(@schedule.ready?(time: Time.now)).to be false
+        expect(@schedule.call(time: Time.now)).to be false
       end
     end
 
     it "is not ready if the month and day match and the time does not match" do
       @schedule = Automations::AnnualSchedule.new months: [9], days: [28], times: [12]
       Timecop.travel Time.new(2024, 9, 28, 11, 0) do # Saturday, 28thSeptember 2024, 11:00
-        expect(@schedule.ready?(time: Time.now)).to be false
+        expect(@schedule.call(time: Time.now)).to be false
       end
     end
   end

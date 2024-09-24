@@ -4,7 +4,7 @@ module Automations
       super(event_names: event_names.map(&:to_s))
     end
 
-    def ready? event:, data:
+    def call event:, data:
       event_names.include? event.to_s
     end
 

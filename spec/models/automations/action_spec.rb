@@ -4,9 +4,15 @@ module Automations
   RSpec.describe Action, type: :model do
     # standard:disable Lint/ConstantDefinitionInBlock
     class SomeHandler < Struct.new(:data, keyword_init: true)
-      def accepts?(**) = true
+      include Plumbing::Pipeline
 
-      def call = nil
+      perform :do_something
+
+      private
+
+      def do_something(input)
+        (data == "raise_error") ? raise("BOOM") : {data: data}
+      end
     end
     # standard:enable Lint/ConstantDefinitionInBlock
 
@@ -51,42 +57,30 @@ module Automations
         expect(@action.configuration_data).to eq({data: "something_else"})
       end
 
-      it "does not allow handlers to be saved if they do not respond to #accepts?, #call, #to_s and #to_h" do
+      it "does not allow handlers to be saved if they do not respond to #call, #to_s and #to_h" do
         @bad_handler = Object.new
 
         expect { Action.new handler: @bad_handler }.to raise_error TypeError
       end
     end
 
-    context "#accepts?" do
-      it "delegates to the configuration" do
-        @handler = double "handler"
-        @container = double "container"
-
-        @container = Automatable.new
-        @automation = Automation.new container: @container
-        @action = Action.new automation: @automation
-        allow(@action).to receive(:handler).and_return(@handler)
-
-        expect(@handler).to receive(:accepts?).with(container: @container, automation: @automation, action: @action, key: "value").and_return(false)
-
-        expect(@action.accepts?(automation: @automation, key: "value")).to be false
-      end
-    end
-
     context "#call" do
-      it "delegates to the configuration" do
-        @handler = double "handler"
-        @container = double "container"
-
+      it "merges the input with the result from the handler" do
+        @handler = SomeHandler.new(data: "result")
         @container = Automatable.new
         @automation = Automation.new container: @container
-        @action = Action.new automation: @automation
-        allow(@action).to receive(:handler).and_return(@handler)
+        @action = Action.new automation: @automation, handler: @handler
 
-        expect(@handler).to receive(:call).with(container: @container, automation: @automation, action: @action, key: "value").and_return(more: "data")
+        expect(@action.call(key: "value")).to eq({key: "value", data: "result"})
+      end
 
-        expect(@action.call(key: "value")).to eq({key: "value", more: "data"})
+      it "handles any exceptions raised by the configuration" do
+        @handler = SomeHandler.new(data: "raise_error")
+        @container = Automatable.new
+        @automation = Automation.new container: @container
+        @action = Action.new automation: @automation, handler: @handler
+
+        expect(@action.call(key: "value")).to eq(nil)
       end
     end
   end

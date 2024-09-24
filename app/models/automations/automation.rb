@@ -15,7 +15,7 @@ module Automations
     def to_param = "#{id}-#{name}".parameterize
 
     def call **params
-      (ready?(**params) && permitted?(**params)) ? trigger_actions(**params) : nil
+      permitted?(**params) ? trigger_actions(**params) : nil
     end
 
     def add_action name, handler:
@@ -33,10 +33,6 @@ module Automations
     end
 
     private
-
-    def ready? **params
-      configuration.ready?(**params)
-    end
 
     def permitted? **params
       before_trigger.nil? ? true : before_trigger.trigger?(self, **params)

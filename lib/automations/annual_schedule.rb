@@ -1,6 +1,13 @@
 module Automations
   class AnnualSchedule < Struct.new(:months, :days, :times)
+    include Plumbing::Pipeline
     include Validations
+
+    pre_condition :time_supplied do |input|
+      input.key? :time
+    end
+
+    perform :check_time
 
     def initialize(months:, days:, times:)
       validate_months months
@@ -9,12 +16,15 @@ module Automations
       super(months, days, times)
     end
 
-    def ready?(time:, **)
-      months.include?(time.month) && days.include?(time.day) && times.include?(time.hour)
-    end
-
     def to_s
       "Annual - M: #{months.inspect}, D: #{days.inspect}, T: #{times.inspect}"
+    end
+
+    private
+
+    def check_time(input)
+      time = input[:time]
+      months.include?(time.month) && days.include?(time.day) && times.include?(time.hour)
     end
   end
 end
