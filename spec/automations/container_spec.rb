@@ -152,7 +152,7 @@ module Automations
           expect(automation).to receive(:call).with(event: "some_event", data: @activity)
         end
 
-        @container.call_triggers "some_event", data: @activity
+        @container.call_triggers event: "some_event", data: @activity
       end
     end
   end

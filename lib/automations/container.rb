@@ -26,8 +26,8 @@ module Automations
       scheduled_automations.collect { |automation| automation.call(time: time) }
     end
 
-    def call_triggers event, data: nil
-      triggers.collect { |trigger| trigger.call(event: event, data: data) }
+    def call_triggers **params
+      triggers.collect { |trigger| trigger.call(**params) }
     end
 
     private
