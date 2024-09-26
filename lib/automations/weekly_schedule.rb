@@ -16,9 +16,8 @@ module Automations
       super(weeks, days, times)
     end
 
-    def to_s
-      "Weekly - W: #{weeks.inspect}, D: #{days.inspect}, T: #{times.inspect}"
-    end
+    def to_s = "Weekly - W: #{weeks.inspect}, D: #{days.inspect}, T: #{times.inspect}"
+    alias_method :ready?, :call
 
     private
 

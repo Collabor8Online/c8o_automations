@@ -15,19 +15,14 @@ module Automations
 
     def call **params
       params.merge handler.call(container: container, automation: automation, action: self, **params)
-    rescue
-      nil
     end
 
-    def handler
-      @handler ||= handler_class_name.constantize.new(**configuration_data)
-    end
+    def handler = handler_class_name.constantize.new(**configuration_data)
 
     def handler= value
       Automations::Handler.verify value
-      self.handler_class_name = value.nil? ? "" : value.class.name
+      self.handler_class_name = value&.class&.name || ""
       self.configuration_data = value&.to_h || {}
-      @handler = value
     end
   end
 end

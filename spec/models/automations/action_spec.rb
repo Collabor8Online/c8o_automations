@@ -73,15 +73,6 @@ module Automations
 
         expect(@action.call(key: "value")).to eq({key: "value", data: "result"})
       end
-
-      it "handles any exceptions raised by the configuration" do
-        @handler = SomeHandler.new(data: "raise_error")
-        @container = Automatable.new
-        @automation = Automation.new container: @container
-        @action = Action.new automation: @automation, handler: @handler
-
-        expect(@action.call(key: "value")).to eq(nil)
-      end
     end
   end
 end

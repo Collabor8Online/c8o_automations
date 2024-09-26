@@ -16,9 +16,8 @@ module Automations
       super(months, days, times)
     end
 
-    def to_s
-      "Annual - M: #{months.inspect}, D: #{days.inspect}, T: #{times.inspect}"
-    end
+    def to_s = "Annual - M: #{months.inspect}, D: #{days.inspect}, T: #{times.inspect}"
+    alias_method :ready?, :call
 
     private
 

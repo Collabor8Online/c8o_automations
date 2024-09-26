@@ -4,12 +4,10 @@ module Automations
       super(event_names: event_names.map(&:to_s))
     end
 
-    def call event:, data:
+    def ready? event:, data:
       event_names.include? event.to_s
     end
 
-    def to_s
-      "Events - #{event_names.inspect}"
-    end
+    def to_s = "Events - #{event_names.inspect}"
   end
 end

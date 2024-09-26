@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2024_09_05_100636) do
+ActiveRecord::Schema[7.2].define(version: 2024_09_26_092816) do
   create_table "automatables", force: :cascade do |t|
     t.string "name", default: "A container", null: false
     t.datetime "created_at", null: false
@@ -43,5 +43,27 @@ ActiveRecord::Schema[7.2].define(version: 2024_09_05_100636) do
     t.index ["container_type", "container_id"], name: "index_automations_automations_on_container"
   end
 
+  create_table "documents", force: :cascade do |t|
+    t.integer "folder_id"
+    t.string "name", null: false
+    t.integer "status", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["folder_id"], name: "index_documents_on_folder_id"
+  end
+
+  create_table "folders", force: :cascade do |t|
+    t.integer "project_id"
+    t.integer "parent_id"
+    t.string "name", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["parent_id"], name: "index_folders_on_parent_id"
+    t.index ["project_id"], name: "index_folders_on_project_id"
+  end
+
   add_foreign_key "automations_actions", "automations_automations", column: "automation_id"
+  add_foreign_key "documents", "folders"
+  add_foreign_key "folders", "automatables", column: "project_id"
+  add_foreign_key "folders", "folders", column: "parent_id"
 end

@@ -5,8 +5,8 @@ module Automations
     # test_app/app/models/container is an ActiveRecord model with the AutomationsAutomatable module included
 
     # standard:disable Lint/ConstantDefinitionInBlock
-    class BeforeTrigger
-      def trigger?(automation, **params) = true
+    class ContainerBeforeTrigger
+      def can_call?(automation, **params) = true
     end
     # standard:enable Lint/ConstantDefinitionInBlock
 
@@ -71,20 +71,20 @@ module Automations
         @schedule = DailySchedule.new days: [1, 2], times: [8, 12]
         @container = Automatable.create name: "My container"
 
-        @automation = @container.add_scheduled_automation "My scheduled automation", configuration: @schedule, before_trigger: BeforeTrigger
+        @automation = @container.add_scheduled_automation "My scheduled automation", configuration: @schedule, before_trigger: ContainerBeforeTrigger
 
         expect(@automation).to_not be_nil
-        expect(@automation.send(:before_trigger)).to be_kind_of(BeforeTrigger)
+        expect(@automation.before_trigger).to be_kind_of(ContainerBeforeTrigger)
       end
 
       it "adds a scheduled automation with a before_trigger class name" do
         @schedule = DailySchedule.new days: [1, 2], times: [8, 12]
         @container = Automatable.create name: "My container"
 
-        @automation = @container.add_scheduled_automation "My scheduled automation", configuration: @schedule, before_trigger: "Automations::BeforeTrigger"
+        @automation = @container.add_scheduled_automation "My scheduled automation", configuration: @schedule, before_trigger: ContainerBeforeTrigger
 
         expect(@automation).to_not be_nil
-        expect(@automation.send(:before_trigger)).to be_kind_of(BeforeTrigger)
+        expect(@automation.send(:before_trigger)).to be_kind_of(ContainerBeforeTrigger)
       end
     end
 
@@ -105,20 +105,20 @@ module Automations
         @filter = EventNameFilter.new event_names: ["something_updated", "something_created"]
         @container = Automatable.create name: "My container"
 
-        @automation = @container.add_trigger "My trigger", configuration: @filter, before_trigger: BeforeTrigger
+        @automation = @container.add_trigger "My trigger", configuration: @filter, before_trigger: ContainerBeforeTrigger
 
         expect(@automation).to_not be_nil
-        expect(@automation.send(:before_trigger)).to be_kind_of(BeforeTrigger)
+        expect(@automation.send(:before_trigger)).to be_kind_of(ContainerBeforeTrigger)
       end
 
       it "adds a trigger with a before_trigger class name" do
         @filter = EventNameFilter.new event_names: ["something_updated", "something_created"]
         @container = Automatable.create name: "My container"
 
-        @automation = @container.add_trigger "My trigger", configuration: @filter, before_trigger: "Automations::BeforeTrigger"
+        @automation = @container.add_trigger "My trigger", configuration: @filter, before_trigger: ContainerBeforeTrigger
 
         expect(@automation).to_not be_nil
-        expect(@automation.send(:before_trigger)).to be_kind_of(BeforeTrigger)
+        expect(@automation.send(:before_trigger)).to be_kind_of(ContainerBeforeTrigger)
       end
     end
 

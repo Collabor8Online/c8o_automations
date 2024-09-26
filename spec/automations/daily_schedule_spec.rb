@@ -27,37 +27,37 @@ RSpec.describe Automations::DailySchedule do
     end
   end
 
-  context "#call" do
+  context "#ready?" do
     it "must be supplied with a time" do
       @schedule = Automations::DailySchedule.new days: [5], times: [11]
-      expect { @schedule.call(some: "data") }.to raise_error(Plumbing::PreConditionError)
+      expect { @schedule.ready?(some: "data") }.to raise_error(Plumbing::PreConditionError)
     end
 
     it "is ready if the day and time match" do
       @schedule = Automations::DailySchedule.new days: [5], times: [11]
       Timecop.travel Time.new(2024, 9, 6, 11, 0) do # Friday, 6th September 2024, 11:00
-        expect(@schedule.call(time: Time.now)).to be true
+        expect(@schedule.ready?(time: Time.now)).to be true
       end
     end
 
     it "is ready if the day matches and the time is within the following hour" do
       @schedule = Automations::DailySchedule.new days: [5], times: [11]
       Timecop.travel Time.new(2024, 9, 6, 11, 45) do # Friday, 6th September 2024, 11:45
-        expect(@schedule.call(time: Time.now)).to be true
+        expect(@schedule.ready?(time: Time.now)).to be true
       end
     end
 
     it "is not ready if the day does not match and the time matches" do
       @schedule = Automations::DailySchedule.new days: [4], times: [11]
       Timecop.travel Time.new(2024, 9, 6, 11, 0) do # Friday, 6th September 2024, 11:00
-        expect(@schedule.call(time: Time.now)).to be false
+        expect(@schedule.ready?(time: Time.now)).to be false
       end
     end
 
     it "is not ready if the day matches and the time does not match" do
       @schedule = Automations::DailySchedule.new days: [5], times: [12]
       Timecop.travel Time.new(2024, 9, 6, 11, 0) do # Friday, 6th September 2024, 11:00
-        expect(@schedule.call(time: Time.now)).to be false
+        expect(@schedule.ready?(time: Time.now)).to be false
       end
     end
   end

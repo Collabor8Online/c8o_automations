@@ -3,20 +3,16 @@ require "rails_helper"
 module Automations
   RSpec.describe Automation, type: :model do
     # standard:disable Lint/ConstantDefinitionInBlock
-    class SomeStruct < Struct.new(:this, :that, keyword_init: true)
-      def call(**params) = true
-    end
-
     class AreYouReady < Struct.new(:are_you_ready, keyword_init: true)
-      def call(**params) = are_you_ready
+      def ready?(**params) = are_you_ready
     end
 
     class BeforeTriggerSaysNo
-      def trigger?(automation, **params) = false
+      def can_call?(automation, **params) = false
     end
 
     class BeforeTriggerSaysYes
-      def trigger?(automation, **params) = true
+      def can_call?(automation, **params) = true
     end
 
     class RespondsWithGreeting < Struct.new(:greeting, keyword_init: true)
@@ -67,130 +63,65 @@ module Automations
       end
     end
 
-    context "#configuration_data" do
-      it "is a hash" do
-        @automation = Automation.new configuration_data: {key: "value"}
-
-        expect(@automation.configuration_data).to eq({key: "value"})
-      end
-    end
-
     context "#configuration" do
-      it "is built from the configuration data's class name and supplied configuration data" do
-        @automation = Automation.new configuration_data: {this: "this", that: "that"}, configuration_class_name: "Automations::SomeStruct"
-
-        expect(@automation.configuration).to be_a(Automations::SomeStruct)
-        expect(@automation.configuration.this).to eq "this"
-        expect(@automation.configuration.that).to eq "that"
-      end
-    end
-
-    context "#configuration=" do
-      it "records the details of the configuration" do
-        @automation = Automation.new configuration: Automations::SomeStruct.new(this: "this", that: "that")
-
-        expect(@automation.configuration).to eq Automations::SomeStruct.new(this: "this", that: "that")
-      end
-
-      it "does not allow configurations to be saved if they do not have a #call, #to_h and #to_s method defined" do
+      it "must have #ready? #to_s and #to_h methods" do
         @bad_config = Object.new
 
         expect { Automation.new(configuration: @bad_config) }.to raise_error(TypeError)
       end
+
+      it "is stored with the automation" do
+        @automation = Automation.new configuration: AreYouReady.new(are_you_ready: true)
+
+        expect(@automation.configuration).to be_kind_of AreYouReady
+        expect(@automation.configuration.are_you_ready).to eq true
+      end
     end
 
     context "#before_trigger" do
-      it "is built from the before trigger class name" do
-        @automation = Automation.new configuration_data: {this: "this", that: "that"}, configuration_class_name: "Automations::SomeStruct", before_trigger_class_name: "SomeStruct"
+      it "must have a #can_call? method" do
+        @bad_config = Object.new
 
-        expect(@automation.configuration).to be_a(SomeStruct)
-        expect(@automation.configuration.this).to eq "this"
-        expect(@automation.configuration.that).to eq "that"
+        expect { Automation.new(before_trigger: @bad_config) }.to raise_error(TypeError)
+      end
+
+      it "is stored with the automation" do
+        @automation = Automation.new before_trigger: BeforeTriggerSaysNo.new
+
+        expect(@automation.before_trigger).to be_kind_of BeforeTriggerSaysNo
       end
     end
 
     context "#call" do
-      it "does nothing if a before_trigger is defined and returns false" do
-        @automation = Automation.new configuration_class_name: "Automations::AreYouReady", before_trigger_class_name: "Automations::BeforeTriggerSaysNo", configuration_data: {are_you_ready: true}
+      it "does nothing if a before trigger is defined and says the automation cannot be called" do
+        @automation = Automation.new configuration: AreYouReady.new(are_you_ready: true), before_trigger: BeforeTriggerSaysNo.new
 
-        expect(@automation).to_not receive(:trigger_actions)
+        expect(@automation).to_not receive(:call_actions)
 
-        expect(@automation.call(some: "values")).to be_nil
+        @automation.call(some: "values")
       end
 
-      it "triggers actions if the configuration says it is ready" do
-        @automation = Automation.new configuration_class_name: "Automations::AreYouReady", configuration_data: {are_you_ready: true}
+      it "calls its actions if the before trigger says it can be called and the configuration is ready" do
+        @automation = Automation.new configuration: AreYouReady.new(are_you_ready: true), before_trigger: BeforeTriggerSaysYes.new
 
-        expect(@automation).to receive(:trigger_actions).with(say: "Hello").and_return({greeting: "Hello Alice"})
-        expect(@automation.call(say: "Hello")).to eq({greeting: "Hello Alice"})
+        expect(@automation).to receive(:call_actions).with(say: "Hello")
+
+        @automation.call(say: "Hello")
       end
 
-      it "triggers actions if the configuration says it is ready and the before_trigger hook returns true" do
-        @automation = Automation.new configuration_class_name: "Automations::AreYouReady", before_trigger_class_name: "Automations::BeforeTriggerSaysYes", configuration_data: {are_you_ready: true}
+      it "calls its actions if there is no before trigger and the configuration is ready" do
+        @automation = Automation.new configuration: AreYouReady.new(are_you_ready: true)
 
-        expect(@automation).to receive(:trigger_actions).with(say: "Hello").and_return({greeting: "Hello Alice"})
-        expect(@automation.call(say: "Hello")).to eq({greeting: "Hello Alice"})
-      end
-    end
+        expect(@automation).to receive(:call_actions).with(say: "Hello")
 
-    context "#trigger_actions" do
-      it "triggers the actions" do
-        @first = double("Action", accepts?: true)
-        @second = double("Action", accepts?: true)
-
-        @automation = Automation.new configuration_class_name: "Automations::AreYouReady", configuration_data: {are_you_ready: true}
-        allow(@automation).to receive(:actions).and_return [@first, @second]
-
-        expect(@first).to receive(:call).with(some: "params").and_return(some: "params")
-        expect(@second).to receive(:call).with(some: "params").and_return(some: "params")
-
-        @automation.send :trigger_actions, some: "params"
-      end
-
-      it "ignores actions that do not accept the input parameters" do
-        @first = double("Action", accepts?: true)
-        @second = double("Action", accepts?: false)
-
-        @automation = Automation.new configuration_class_name: "Automations::AreYouReady", configuration_data: {are_you_ready: true}
-        allow(@automation).to receive(:actions).and_return [@first, @second]
-
-        expect(@first).to receive(:call).with(some: "params").and_return(some: "params")
-        expect(@second).to_not receive(:call)
-
-        @automation.send :trigger_actions, some: "params"
-      end
-
-      it "combines the results of the actions" do
-        @first = double("Action", accepts?: true)
-        @second = double("Action", accepts?: true)
-
-        @automation = Automation.new configuration_class_name: "Automations::AreYouReady", configuration_data: {are_you_ready: true}
-        allow(@automation).to receive(:actions).and_return [@first, @second]
-
-        expect(@first).to receive(:call).with(some: "params").and_return(extra: "data")
-        expect(@second).to receive(:call).with(some: "params", extra: "data").and_return(some: "override")
-
-        @automation.send :trigger_actions, some: "params"
-      end
-
-      it "returns the combined results of all actions" do
-        @first = double("Action", accepts?: true)
-        @second = double("Action", accepts?: true)
-
-        @automation = Automation.new configuration_class_name: "Automations::AreYouReady", configuration_data: {are_you_ready: true}
-        allow(@automation).to receive(:actions).and_return [@first, @second]
-
-        allow(@first).to receive(:call).with(some: "params").and_return(extra: "data")
-        allow(@second).to receive(:call).with(some: "params", extra: "data").and_return(some: "override")
-
-        expect(@automation.send(:trigger_actions, some: "params")).to eq({some: "override", extra: "data"})
+        @automation.call(say: "Hello")
       end
     end
 
     context "#add_action" do
       it "adds an action to the end of the list" do
         @container = Automatable.create! name: "My container"
-        @automation = Automation.create! container: @container, name: "Automation", configuration_class_name: "Automations::AreYouReady", configuration_data: {are_you_ready: true}
+        @automation = Automation.create! container: @container, name: "Automation", configuration: AreYouReady.new(are_you_ready: true)
 
         @first_action = @automation.add_action "First action", handler: RespondsWithGreeting.new(greeting: "Hello")
         expect(@first_action).to be_kind_of Action
@@ -202,6 +133,40 @@ module Automations
         expect(@second_action.position).to eq 2
         expect(@second_action.handler_class_name).to eq "Automations::SwearsLoudly"
         expect(@second_action.configuration_data).to eq({expletive: "balls"})
+      end
+    end
+
+    context "#remove_action" do
+      it "removes the given action and reorders the other actions" do
+        @container = Automatable.create! name: "My container"
+        @automation = Automation.create! container: @container, name: "Automation", configuration: AreYouReady.new(are_you_ready: true)
+
+        @first_action = Action.create! automation: @automation, name: "First action", handler: RespondsWithGreeting.new(greeting: "Hello")
+        @second_action = Action.create! automation: @automation, name: "Second action", handler: SwearsLoudly.new(expletive: "balls")
+        @third_action = Action.create! automation: @automation, name: "Third action", handler: SwearsLoudly.new(expletive: "fanny")
+        expect(@automation.actions.reload.size).to eq 3
+
+        @automation.remove_action @second_action
+
+        expect(@automation.actions.reload.size).to eq 2
+        expect(@automation.actions.first).to eq @first_action
+        expect(@automation.actions.last).to eq @third_action
+        expect(@third_action.reload.position).to eq 2
+      end
+    end
+
+    context "#call_actions" do
+      it "uses an Automations::ActionCaller to call the actions in sequence" do
+        @actions = (1..3).map { |i| double "Automations::Action" }
+        @automation = Automation.new configuration: AreYouReady.new(are_you_ready: true)
+        allow(@automation).to receive(:actions).and_return(@actions)
+
+        @action_caller = double "Automations::ActionCaller"
+
+        expect(Automations::ActionCaller).to receive(:new).with(@actions).and_return(@action_caller)
+        expect(@action_caller).to receive(:call).with(say: "Hello")
+
+        @automation.send :call_actions, say: "Hello"
       end
     end
   end

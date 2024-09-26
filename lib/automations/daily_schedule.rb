@@ -15,9 +15,8 @@ module Automations
       super(days, times)
     end
 
-    def to_s
-      "Daily - D: #{days.inspect}, T: #{times.inspect}"
-    end
+    def to_s = "Daily - D: #{days.inspect}, T: #{times.inspect}"
+    alias_method :ready?, :call
 
     private
 
