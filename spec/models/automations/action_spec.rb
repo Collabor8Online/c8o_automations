@@ -16,7 +16,7 @@ module Automations
     end
     # standard:enable Lint/ConstantDefinitionInBlock
 
-    context "#name" do
+    describe "#name" do
       it "is mandatory" do
         @action = Action.new name: ""
 
@@ -31,14 +31,14 @@ module Automations
       end
     end
 
-    context "#configuration_data" do
+    describe "#configuration_data" do
       it "is a Hash" do
         @action = Action.new
         expect(@action.configuration_data).to eq({})
       end
     end
 
-    context "#handler" do
+    describe "#handler" do
       it "is created from the handler's class name" do
         @action = Action.new handler_class_name: "Automations::SomeHandler", configuration_data: {data: "something"}
 
@@ -64,7 +64,7 @@ module Automations
       end
     end
 
-    context "#call" do
+    describe "#call" do
       it "merges the input with the result from the handler" do
         @handler = SomeHandler.new(data: "result")
         @container = Automatable.new

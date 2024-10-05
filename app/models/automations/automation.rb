@@ -27,7 +27,7 @@ module Automations
     end
 
     def configuration
-      configuration_class_name.constantize.new(**configuration_data.except(:class_name, :before_trigger))
+      configuration_class_name.blank? ? nil : configuration_class_name.constantize.new(**configuration_data.except(:class_name, :before_trigger))
     end
 
     def configuration= value
@@ -50,7 +50,7 @@ module Automations
     def can_call_actions?(**)
       callback = before_trigger
       return false if callback.present? && !callback.can_call?(self, **)
-      configuration.ready?(**)
+      configuration.nil? ? true : configuration.ready?(**)
     end
 
     def call_actions(**) = Automations::ActionCaller.new(actions).call(**)

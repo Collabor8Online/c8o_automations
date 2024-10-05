@@ -96,7 +96,7 @@ module Automations
       it "does nothing if a before trigger is defined and says the automation cannot be called" do
         @automation = Automation.new configuration: AreYouReady.new(are_you_ready: true), before_trigger: BeforeTriggerSaysNo.new
 
-        expect(@automation).to_not receive(:call_actions)
+        expect(Automations::ActionCaller).to_not receive(:new)
 
         @automation.call(some: "values")
       end
@@ -104,7 +104,9 @@ module Automations
       it "calls its actions if the before trigger says it can be called and the configuration is ready" do
         @automation = Automation.new configuration: AreYouReady.new(are_you_ready: true), before_trigger: BeforeTriggerSaysYes.new
 
-        expect(@automation).to receive(:call_actions).with(say: "Hello")
+        @action_caller = double "Automations::ActionCaller"
+        expect(Automations::ActionCaller).to receive(:new).and_return(@action_caller)
+        expect(@action_caller).to receive(:call).with(say: "Hello")
 
         @automation.call(say: "Hello")
       end
@@ -112,7 +114,19 @@ module Automations
       it "calls its actions if there is no before trigger and the configuration is ready" do
         @automation = Automation.new configuration: AreYouReady.new(are_you_ready: true)
 
-        expect(@automation).to receive(:call_actions).with(say: "Hello")
+        @action_caller = double "Automations::ActionCaller"
+        expect(Automations::ActionCaller).to receive(:new).and_return(@action_caller)
+        expect(@action_caller).to receive(:call).with(say: "Hello")
+
+        @automation.call(say: "Hello")
+      end
+
+      it "calls its actions if there is no before trigger and no configuration" do
+        @automation = Automation.new
+
+        @action_caller = double "Automations::ActionCaller"
+        expect(Automations::ActionCaller).to receive(:new).and_return(@action_caller)
+        expect(@action_caller).to receive(:call).with(say: "Hello")
 
         @automation.call(say: "Hello")
       end
