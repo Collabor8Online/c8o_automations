@@ -58,7 +58,24 @@ RSpec.describe "Firing a trigger that moves documents to different folders", typ
     expect(@result[:success]).to eq true
   end
 
-  it "records its actions in the audit trail"
+  it "notifies observers when automations and actions are fired" do
+    @document_1 = @uploads_folder.documents.create! name: "document1.txt", status: "requires_review"
+    @document_2 = @uploads_folder.documents.create! name: "document2.txt", status: "requires_review"
+
+    @automation_events = []
+    Automations.events.add_observer do |event_name, data|
+      @automation_events << data if event_name == "automations/automation_triggered"
+    end
+    @action_events = []
+    Automations.events.add_observer do |event_name, data|
+      @action_events << data if event_name == "automations/action_fired"
+    end
+
+    @result = @automation.call documents: @uploads_folder.documents, folder: @uploads_folder
+
+    expect { @automation_events.count }.to become 1
+    expect { @action_events.count }.to become 3
+  end
 
   it "stops when an action does not fire" do
     @document_1 = @uploads_folder.documents.create! name: "document1.txt", status: "requires_review"
@@ -77,5 +94,29 @@ RSpec.describe "Firing a trigger that moves documents to different folders", typ
     expect(@result[:error_type]).to eq "FolderNotFound"
   end
 
-  it "records that it has stopped in the audit trail"
+  it "notifies observers when actions fail" do
+    @document_1 = @uploads_folder.documents.create! name: "document1.txt", status: "requires_review"
+    @document_2 = @uploads_folder.documents.create! name: "document2.txt", status: "requires_review"
+
+    @automation_events = []
+    Automations.events.add_observer do |event_name, data|
+      @automation_events << data if event_name == "automations/automation_triggered"
+    end
+    @action_events = []
+    Automations.events.add_observer do |event_name, data|
+      @action_events << data if event_name == "automations/action_fired"
+    end
+    @failed_action_events = []
+    Automations.events.add_observer do |event_name, data|
+      @failed_action_events << data if event_name == "automations/action_failed"
+    end
+
+    # Delete the "in progress" folder, so the MoveDocumentsDown(folder_name: "In progress") action cannot fire
+    @in_progress_folder.destroy
+    @result = @automation.call documents: @uploads_folder.documents, folder: @uploads_folder
+
+    expect { @automation_events.count }.to become 1
+    expect { @action_events.count }.to become 2
+    expect { @failed_action_events.count }.to become 1
+  end
 end

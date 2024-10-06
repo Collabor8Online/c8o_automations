@@ -45,7 +45,10 @@ module Automations
       configuration.nil? ? true : configuration.ready?(**)
     end
 
-    def call_actions(**) = Automations::ActionCaller.new(actions).call(**)
+    def call_actions(**params)
+      Automations.events.notify "automations/automation_triggered", automation: self, **params
+      Automations::ActionCaller.new(actions).call(**params)
+    end
 
     def to_configuration_hash
       {
