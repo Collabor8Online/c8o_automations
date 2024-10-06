@@ -16,17 +16,11 @@ module Automations
       can_call_actions?(**) ? call_actions(**) : nil
     end
 
-    def add_action name, handler:
-      actions.create! name: name, handler: handler
-    end
+    def add_action(name, handler:) = actions.create! name: name, handler: handler
 
-    def remove_action action
-      action.destroy
-    end
+    def remove_action(action) = action.destroy
 
-    def configuration
-      configuration_class_name.blank? ? nil : configuration_class_name.constantize.new(**configuration_data.except(:class_name, :before_trigger))
-    end
+    def configuration = configuration_class_name.blank? ? nil : configuration_class_name.constantize.new(**configuration_data.except(:class_name, :before_trigger))
 
     def configuration= value
       Automations::Configuration.verify value
@@ -34,14 +28,14 @@ module Automations
       self.configuration_data = value&.to_h || {}
     end
 
-    def before_trigger
-      before_trigger_class_name.blank? ? nil : before_trigger_class_name.constantize.new
-    end
+    def before_trigger = before_trigger_class_name.blank? ? nil : before_trigger_class_name.constantize.new
 
     def before_trigger= value
       Automations::BeforeTrigger.verify value
       self.before_trigger_class_name = value&.class&.name || ""
     end
+
+    def to_configuration_file = to_configuration_hash.to_yaml
 
     private
 
@@ -52,5 +46,18 @@ module Automations
     end
 
     def call_actions(**) = Automations::ActionCaller.new(actions).call(**)
+
+    def to_configuration_hash
+      {
+        "name" => name,
+        "class_name" => configuration_class_name,
+        "configuration" => configuration_data,
+        "actions" => actions_configuration
+      }
+    end
+
+    def actions_configuration
+      actions.map { |action| action.to_configuration_hash }
+    end
   end
 end

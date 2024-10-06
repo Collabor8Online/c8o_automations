@@ -14,5 +14,6 @@ module Automations
   require_relative "automations/container"
   require_relative "automations/action_caller"
   require_relative "automations/events"
+  require_relative "automations/builder"
   require_relative "automations/errors"
 end

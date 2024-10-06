@@ -24,5 +24,9 @@ module Automations
       self.handler_class_name = value&.class&.name || ""
       self.configuration_data = value&.to_h || {}
     end
+
+    def to_configuration_hash
+      {"name" => name, "class_name" => handler_class_name, "configuration" => configuration_data}
+    end
   end
 end
