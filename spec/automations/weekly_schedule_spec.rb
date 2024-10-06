@@ -1,7 +1,7 @@
 require "rails_helper"
 
 RSpec.describe Automations::WeeklySchedule do
-  context "#initialize" do
+  describe "#initialize" do
     it "accepts weeks between 1 and 5" do
       @schedule = Automations::WeeklySchedule.new weeks: [3, 4], days: [1, 2], times: [10, 22]
 
@@ -39,7 +39,7 @@ RSpec.describe Automations::WeeklySchedule do
     end
   end
 
-  context "#ready?" do
+  describe "#ready?" do
     it "must be supplied with a time" do
       @schedule = Automations::DailySchedule.new days: [5], times: [11]
       expect { @schedule.ready?(some: "data") }.to raise_error(Plumbing::PreConditionError)
@@ -81,7 +81,7 @@ RSpec.describe Automations::WeeklySchedule do
     end
   end
 
-  context "#to_h" do
+  describe "#to_h" do
     it "publishes its attributes" do
       @schedule = Automations::WeeklySchedule.new weeks: [1], days: [5], times: [12]
       expect(@schedule.to_h).to eq({weeks: [1], days: [5], times: [12]})

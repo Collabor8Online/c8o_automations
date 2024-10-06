@@ -2,27 +2,7 @@ require "rails_helper"
 
 module Automations
   RSpec.describe Automation, type: :model do
-    # standard:disable Lint/ConstantDefinitionInBlock
-    class AreYouReady < Struct.new(:are_you_ready, keyword_init: true)
-      def ready?(**params) = are_you_ready
-    end
-
-    class BeforeTriggerSaysNo
-      def can_call?(automation, **params) = false
-    end
-
-    class BeforeTriggerSaysYes
-      def can_call?(automation, **params) = true
-    end
-
-    class RespondsWithGreeting < Struct.new(:greeting, keyword_init: true)
-      def call(**params) = {greeting: "#{greeting} #{params[:name]}"}
-    end
-
-    class SwearsLoudly < Struct.new(:expletive, keyword_init: true)
-      def call(**params) = {response: expletive.to_s}
-    end
-    # standard:enable Lint/ConstantDefinitionInBlock
+    # see spec/test_app/app/models for the configurations
 
     context ".for" do
       it "lists active automations for the given container" do
@@ -140,12 +120,12 @@ module Automations
         @first_action = @automation.add_action "First action", handler: RespondsWithGreeting.new(greeting: "Hello")
         expect(@first_action).to be_kind_of Action
         expect(@first_action.position).to eq 1
-        expect(@first_action.handler_class_name).to eq "Automations::RespondsWithGreeting"
+        expect(@first_action.handler_class_name).to eq "RespondsWithGreeting"
         expect(@first_action.configuration_data).to eq({greeting: "Hello"})
         @second_action = @automation.add_action "Second action", handler: SwearsLoudly.new(expletive: "balls")
         expect(@second_action).to be_kind_of Action
         expect(@second_action.position).to eq 2
-        expect(@second_action.handler_class_name).to eq "Automations::SwearsLoudly"
+        expect(@second_action.handler_class_name).to eq "SwearsLoudly"
         expect(@second_action.configuration_data).to eq({expletive: "balls"})
       end
     end

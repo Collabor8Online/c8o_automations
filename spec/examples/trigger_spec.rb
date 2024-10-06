@@ -12,51 +12,10 @@ require "rails_helper"
 #       |
 #       +-- Completed
 #
-#   When a document is added to "Uploads" and its status is "awaiting_review" it will be moved "across" to the "Review" folder and then "down" to the "In progress" folder and the reviewer notified.
+#  When a document is added to "Uploads" and its status is "awaiting_review" it will be moved "across" to the "Review" folder and then "down" to the "In progress" folder and the reviewer notified.
+#  See [the test app](/spec/test_app/app/models) for the configurations and actions used in these tests
 
 RSpec.describe "Firing a trigger that moves documents to different folders", type: :model do
-  # standard:disable Lint/ConstantDefinitionInBlock
-
-  # Configuration for the "Review documents" automation
-  class ReviewDocuments < Struct.new(:status, keyword_init: true)
-    def ready? **params
-      params.key?(:documents) && params[:documents].any? { |d| d.requires_review? }
-    end
-  end
-
-  # Handler for the "move documents to review folder" action
-  class MoveDocumentsAcross < Struct.new(:folder_name, keyword_init: true)
-    def call(documents:, folder:, **)
-      raise FolderNotFound if (destination_folder = folder.sibling_called(folder_name)).nil?
-      # This is a bit nasty - have to convert to an array because if we are given an ActiveRecord relation for "all documents in folder X" then the relation will update itself to be empty after we move the documents out of that folder
-      documents = documents.collect { |d| d.update!(folder: destination_folder) && d }
-      {documents: documents, folder: destination_folder}
-    end
-  end
-
-  # Handler for the "move documents to in progress folder" action
-  class MoveDocumentsDown < Struct.new(:folder_name, keyword_init: true)
-    def call(documents:, folder:, **)
-      raise FolderNotFound if (destination_folder = folder.children.find_by(name: folder_name)).nil?
-
-      # This is a bit nasty - have to convert to an array because if we are given an ActiveRecord relation for "all documents in folder X" then the relation will update itself to be empty after we move the documents out of that folder
-      documents = documents.collect { |d| d.update!(folder: destination_folder) && d }
-      {documents: documents, folder: destination_folder}
-    end
-  end
-
-  # Handler for the "notify the reviewer" action
-  class NotifyReviewer < Struct.new(:email_address, keyword_init: true)
-    def call(documents:, folder:, **)
-      # TODO: ReviewerMailer.with(documents: documents, folder: folder, recipient: email_address).documents_awaiting_review.deliver_later
-      {documents: documents, folder: folder, reviewer: email_address}
-    end
-  end
-
-  class FolderNotFound < Automations::Error
-  end
-  # standard:enable Lint/ConstantDefinitionInBlock
-
   before do
     @project = Automatable.create! name: "Some project"
     @uploads_folder = Folder.create! project: @project, name: "Uploads"
@@ -64,7 +23,7 @@ RSpec.describe "Firing a trigger that moves documents to different folders", typ
     @in_progress_folder = Folder.create! project: @project, name: "In progress", parent: @review_folder
     @completed_folder = Folder.create! project: @project, name: "Completed", parent: @review_folder
 
-    @automation = Automations::Trigger.create! container: @project, name: "Review documents", configuration: ReviewDocuments.new
+    @automation = Automations::Automation.create! container: @project, name: "Review documents", configuration: ReviewDocuments.new(statuses: ["requires_review"])
     @move_to_review = Automations::Action.create! automation: @automation, name: "Move to Review folder", handler: MoveDocumentsAcross.new(folder_name: "Review"), position: 1
     @move_to_in_progress = Automations::Action.create! automation: @automation, name: "Move to In progress folder", handler: MoveDocumentsDown.new(folder_name: "In progress"), position: 2
     @notify_reviewer = Automations::Action.create! automation: @automation, name: "Notify reviewer", handler: NotifyReviewer.new(email_address: "reviewer@example.com"), position: 3

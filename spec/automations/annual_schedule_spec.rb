@@ -1,7 +1,7 @@
 require "rails_helper"
 
 RSpec.describe Automations::AnnualSchedule do
-  context "#initialize" do
+  describe "#initialize" do
     it "accepts months between 1 and 12" do
       @schedule = Automations::AnnualSchedule.new months: [1, 12], days: [1, 2], times: [10, 22]
 
@@ -39,7 +39,7 @@ RSpec.describe Automations::AnnualSchedule do
     end
   end
 
-  context "#ready?" do
+  describe "#ready?" do
     it "must be supplied with a time" do
       @schedule = Automations::DailySchedule.new days: [5], times: [11]
       expect { @schedule.ready?(some: "data") }.to raise_error(Plumbing::PreConditionError)
@@ -81,7 +81,7 @@ RSpec.describe Automations::AnnualSchedule do
     end
   end
 
-  context "#to_h" do
+  describe "#to_h" do
     it "publishes its attributes" do
       @schedule = Automations::AnnualSchedule.new months: [2, 3], days: [5], times: [12]
       expect(@schedule.to_h).to eq({months: [2, 3], days: [5], times: [12]})

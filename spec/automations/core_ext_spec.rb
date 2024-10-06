@@ -1,8 +1,8 @@
 require "rails_helper"
 
 RSpec.describe "Core extensions" do
-  context "Integer" do
-    context "#between?" do
+  describe "Integer" do
+    describe "#between?" do
       it "is true if the value is between the minimum and maximum" do
         expect(5.between?(1, 10)).to be true
       end
@@ -17,8 +17,8 @@ RSpec.describe "Core extensions" do
     end
   end
 
-  context "Time" do
-    context "#week_of_month" do
+  describe "Time" do
+    describe "#week_of_month" do
       it "is 1 if the time represents a date within the first week of the month" do
         expect(Time.new(2024, 8, 1).week_of_month).to eq 1
         expect(Time.new(2025, 1, 1).week_of_month).to eq 1

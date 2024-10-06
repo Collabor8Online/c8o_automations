@@ -1,7 +1,7 @@
 require "rails_helper"
 
 RSpec.describe Automations::DailySchedule do
-  context "#initialize" do
+  describe "#initialize" do
     it "accepts an array of strings" do
       @filter = Automations::EventNameFilter.new event_names: ["event1", "event2"]
 
@@ -15,7 +15,7 @@ RSpec.describe Automations::DailySchedule do
     end
   end
 
-  context "#ready?" do
+  describe "#ready?" do
     it "is ready if the event is included" do
       @filter = Automations::EventNameFilter.new event_names: ["event1", "event2"]
 

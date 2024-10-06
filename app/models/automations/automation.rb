@@ -7,8 +7,6 @@ module Automations
     has_many :actions, -> { order :position }, class_name: "Automations::Action", foreign_key: "automation_id", dependent: :destroy
 
     scope :for, ->(container) { where(container: container).active }
-    scope :scheduled, -> { where(type: "Automations::ScheduledAutomation").active }
-    scope :triggers, -> { where(type: "Automations::Trigger").active }
 
     def to_s = name
 
