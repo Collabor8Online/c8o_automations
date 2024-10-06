@@ -15,7 +15,7 @@ module Automations
     end
 
     def trigger_automations **params
-      automations.collect { |automation| automation.call(**params) }
+      Automations::AutomationCaller.new(automations).call(**params)
     end
 
     private

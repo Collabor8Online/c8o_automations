@@ -70,8 +70,18 @@ module Automations
       end
     end
 
-    describe "#call_automations" do
-      it "calls the active automations"
+    describe "#trigger_automations" do
+      it "calls the active automations" do
+        @container = Automatable.create name: "My container"
+        @first = Automation.create container: @container, name: "First automation", status: "active"
+        @second = Automation.create container: @container, name: "Second automation", status: "active"
+
+        @automation_caller = double "automation caller"
+        expect(Automations::AutomationCaller).to receive(:new).with([@first, @second]).and_return(@automation_caller)
+        expect(@automation_caller).to receive(:call).with(some: "parameters")
+
+        @container.trigger_automations some: "parameters"
+      end
     end
   end
 end

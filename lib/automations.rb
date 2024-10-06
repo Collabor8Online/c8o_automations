@@ -11,6 +11,7 @@ module Automations
   require_relative "automations/monthly_schedule"
   require_relative "automations/annual_schedule"
   require_relative "automations/event_name_filter"
+  require_relative "automations/automation_caller"
   require_relative "automations/container"
   require_relative "automations/action_caller"
   require_relative "automations/events"
