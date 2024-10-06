@@ -22,7 +22,7 @@ module Automations
       end
 
       it "lists active automations" do
-        @active_automations = @container.active_automations
+        @active_automations = @container.automations
 
         expect(@active_automations.size).to eq 1
         expect(@active_automations).to include(@active_automation)

@@ -4,18 +4,18 @@ module Automations
 
     included do
       has_many :_automations, as: :container, class_name: "Automations::Automation", dependent: :destroy
-      has_many :active_automations, -> { active }, as: :container, class_name: "Automations::Automation"
+      has_many :automations, -> { active }, as: :container, class_name: "Automations::Automation"
       has_many :inactive_automations, -> { inactive }, as: :container, class_name: "Automations::Automation"
     end
 
     def add_automation name, configuration:, before_trigger: nil
       Automations::Automation.create!(container: self, name: name, status: "active", configuration_data: configuration.to_h, configuration_class_name: configuration.class.name, before_trigger_class_name: before_trigger_class_name_from(before_trigger)).tap do |automation|
-        active_automations.reload
+        automations.reload
       end
     end
 
     def trigger_automations **params
-      active_automations.collect { |automation| automation.call(**params) }
+      automations.collect { |automation| automation.call(**params) }
     end
 
     private
