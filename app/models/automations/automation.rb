@@ -5,6 +5,9 @@ module Automations
     enum :status, active: 0, inactive: -1
     serialize :configuration_data, type: Hash, coder: YAML, default: {}
     has_many :actions, -> { order :position }, class_name: "Automations::Action", foreign_key: "automation_id", dependent: :destroy
+    before_save do
+      self.configuration_class_name = "Automations::Always" if configuration_class_name.blank?
+    end
 
     scope :for, ->(container) { where(container: container).active }
 
@@ -24,7 +27,7 @@ module Automations
 
     def configuration= value
       Automations::Configuration.verify value
-      self.configuration_class_name = value&.class&.name || ""
+      self.configuration_class_name = value&.class&.name
       self.configuration_data = value&.to_h || {}
     end
 
