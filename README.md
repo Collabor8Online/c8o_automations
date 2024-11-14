@@ -13,19 +13,13 @@ We use Automations at Collabor8Online to allow user-defined actions to take plac
 
 (Also note that this gem was developed for use by us.  We're sharing it in case others find it useful, but depending upon demand, it may not be a true "community" project.  Finally note that currently it's licensed under the [LGPL](/LICENSE) which may make it unsuitable for some - contact us if you'd like to know about options).
 
+In your application, you choose an ActiveRecord model to be the "container" that holds your automations.  Of course, depending upon your requirements, you may have multiple containers.  To become a container, you `include Automations::Container`.  
+
 In Collabor8Online, all automations are attached to a "Project", so the Project model is also the Automations::Container.
 
-A typical automation is when a document is uploaded into a folder.  If it is marked as "for review", it is moved from the Uploads folder into a "Review/In progress" folder and the reviewer notified.  Then, when the review is completed, another automation is triggered, which moves the document into the "Review/Completed" folder.
+A typical automation is when a document is uploaded into a folder (where a folder is a child model of a project).  If it is marked as "for review", it is moved from the Uploads folder into a "Review/In progress" folder and the reviewer notified.  Then, when the review is completed, another automation is triggered, which moves the document into the "Review/Completed" folder.
 
 A version of this is shown in the [example specification](/spec/examples/trigger_spec.rb).
-
-## Types of Automation
-
-Automations fall in to two categories - ScheduledAutomations and Triggers.
-
-As the name suggests, ScheduledAutomations are designed to fire at regular intervals.  There are four in-built configurations for ScheduledAutomations - a [DailySchedule](lib/automations/daily_schedule.rb), [WeeklySchedule](lib/automations/weekly_schedule.rb), [MonthlySchedule](lib/automations/monthly_schedule.rb) and [AnnualSchedule](lib/automations/annual_schedule.rb).  To get them to work, you will need to have a cron job (or similar) that triggers the `scheduled_automations:trigger` rake task once per hour.
-
-Triggers are more flexible and rely on the containing application to provide the configuration that tells them when to fire.  There is only one in-built configuration for triggers - the [EventNameFilter](lib/automations/event_name_filter.rb).  See below for details about how to define your own and integrate triggers into your app.
 
 ## Containers
 
@@ -39,21 +33,17 @@ class MyContainer < ActiveRecord::Base
 end
 
 @my_container = MyContainer.create ...
-@my_container.add_scheduled_automation "8 am every day", configuration: Automations::DailySchedule.new(days: [0, 1, 2, 3, 4, 5, 6], times: [8])
-@my_container.add_trigger "Someone said hello", configuration: Automations::EventNameFilter.new(event_names: ["someone_said_hello"])
+@my_container.add_automation "8 am every day", configuration: Automations::DailySchedule.new(days: [0, 1, 2, 3, 4, 5, 6], times: [8])
+@my_container.add_automation "Someone said hello", configuration: Automations::EventNameFilter.new(event_names: ["someone_said_hello"])
 
-@my_container.automations.active
-# => 1 trigger, 1 scheduled automation
-@my_container.automations.scheduled
-# => 1 scheduled automation
-@my_container.automations.triggers
-# => 1 trigger
+@my_container.automations
+# => 2 automations
 
-@my_container.call_triggers event: "someone_said_hello", data: @user_who_said_hello
-# => will check the "Someone said hello" configuration and if it passes (the event name is "someone_said_hello") will trigger the automation
+@my_container.trigger_automations event: "someone_said_hello", data: @user_who_said_hello
+# => This will ask each automation if it is ready?.  The "Someone said hello" configuration will respond with true, whereas the "8 am every day" configuration will respond with false.  Therefore the "Someone said hello" automation will trigger and any actions that it has will be called.  
 
-@my_container.call_automations_at Time.now
-# => will check the "8 am every day" configuration and if it passes (if it's between 8am and 9am) will trigger the automation
+@my_container.trigger_automations time: Time.now
+# => This will ask each automation if it is ready?.  The "Someone said hello" configuration will respond with false, whereas the "8 am every day" configuration will respond with true if the current time is betweeen 8am and 9am.  If it is the correct time, the "8 am every day" automation's actions will be called.  
 ```
 
 ## Configurations
@@ -68,22 +58,25 @@ A configuration can be any class that:
 
 The constructor will receive any configuration data required.  The `#ready?` method will receive the data that was used to trigger the automation.
 
-ScheduledAutomations are triggered at a time.  Therefore the [DailySchedule](lib/automations/daily_schedule.rb) uses an array of `days` and `times` to configure when it should be triggered.
+If you want automations to run on a schedule, at particular days or times, there are a set of pre-built configurations that you can reuse - for example the [DailySchedule](lib/automations/daily_schedule.rb) uses an array of `days` and `times` to specify when it should be triggered.
 
 ```ruby
-@my_container.add_scheduled_automation "8 am every day", configuration: Automations::DailySchedule.new(days: [0, 1, 2, 3, 4, 5, 6], times: [8])
+@my_container.add_automation "8 am every day", configuration: Automations::DailySchedule.new(days: [0, 1, 2, 3, 4, 5, 6], times: [8])
 ```
 
-Then, when the automation is triggered (for example, by an hourly cron job), the automation will ask the configuration if it is ready to be triggered.
+Your application could have an hourly cron job that finds your container and tells it to trigger its automations, passing in the current time as a parameter.  The container will find the automation and `call` it, passing the parameters it has been given.  The automation will then call `ready?` with those parameters, and if the configuration replies that it is ready (because the time it has been given is between 8am and 9am) then the automation will trigger and its actions will be called.  
 
 ```ruby
-# automation
-configuration.ready?(time: Time.now)
+# cron job fires a rake task which...
+@my_container.trigger_automations time: Time.now
+# container goes through each automation and forwards the parameters to the call method...
+automation.call **params
+# automation forwards the parameters to the configuration's ready? method to see if it should fire
+configuration.ready? **params
 ```
+In addition to the prebuilt "schedule" configurations, there is an [EventNameFilter](lib/automations/event_name_filter.rb) - which expects to be supplied with a string "event_name" and a "data" parameter (which can be any type).  The constructor to the EventNameFilter is given a list of event_names to accept - so if the event_name provided is in the list, it will say it is `ready?` to fire.  
 
-The DailySchedule then checks to see if it's currently between 8am and 9am and returns true or false accordingly.  If true, the automation then triggers its actions.
-
-Triggers can be fired by any event within your application.  So instead of a time, the parameters passed to the configuration are application-specific.  The example [EventNameFilter](lib/automations/event_name_filter.rb) expects a string "event_name" parameter and a "data" parameter (which matches an observer from the plumbing gem).  The filter looks at the event name and returns true if it is included in its list.  However, in most cases, you will need to write your own configurations to deal with the various triggers that could happen within your application.
+However, in most cases, you will need to write your own configurations to deal with the various triggers that could happen within your application.
 
 ### Custom configurations
 
@@ -107,13 +100,17 @@ end
 @email_server.add_trigger "Spam Email", configuration: SpamEmailReceived.new(blacklisted_domains: ["annoyingmarketers.com", "shit-shovelers.com"])
 ```
 
+Note that the `ready?` method uses a `splat` parameter - this is because (depending upon how you have things configured), you may be sending all kinds of different data to the automations in your application, so with a splat, you can accept varying parameters and respond only if the ones you were expecting were provided.  
+
 ## Actions
 
-An automation uses the configuration to decide if it should be triggered, based on the time, or the event, it has been given.
+An automation uses the configuration to decide if it should be triggered, based on the parameters passed into the containers `trigger_automations` method and the response it receives from its configuration's `ready?` method.
 
 Once triggered, it then goes through its list of actions and triggers each of those in turn.
 
-However, just like automations which rely on their configurations, actions do not do very much by themselves.  Instead, they rely on a handler.  Similar to configurations, these can be built from `Struct`s (as long as `keyword_init: true`) is provided.
+However, just like automations, actions do not do very much by themselves.  
+
+Instead, they rely on a handler.  Similar to configurations, these can be built from `Struct`s (as long as `keyword_init: true`) is provided.
 
 A handler can be any class that:
 - takes a set of keyword arguments in its constructor - `def initialize(folder_name: "Uploads")`
@@ -121,11 +118,11 @@ A handler can be any class that:
 - has a `call(**params)` method to actually perform the action
 - has a `to_s` method that returns a summary of the handler
 
-`call` takes those same parameters and is expected to perform its actions, returning a hash.
+`call` takes the parameters that were passed to `trigger_automations` and is expected to perform its actions and then return a hash.
 
-The automation triggers each action (and hence its handler) in sequence, passing in some parameters at the start.
+As each action is triggered, the returned hash is merged in with the previous parameters and that merged hash is then passed on to the next action in the sequence.  So an action may return the input data unchanged, it may add new items for the next action to use, or it can override some of the existing data.  
 
-As each action is triggered, it returns a hash which is merged in with the previous parameters - so the action modifies or adds to the data which is passed to the next action in the sequence.  So an action can either pass on the input data unchanged, it can add new items to the data, which are then given to the next action, or it can override some of the existing data.  If the action raises an exception, then details of the exception are added to the data (with the :error_type and :error_message keys) and execution is stopped.
+If the action raises an exception, then details of the exception are added to the data (with the :error_type and :error_message keys) and execution is stopped.
 
 The final data returns from the sequence of actions includes a key :success - which will be true if all actions fired correctly or false if an exception was raised.
 
