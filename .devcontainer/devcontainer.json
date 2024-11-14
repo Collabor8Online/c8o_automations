@@ -1,0 +1,23 @@
+{
+  "name": "c8o_data_structures",
+  "image": "mcr.microsoft.com/devcontainers/ruby:1-3.3-bullseye",
+  "features": {
+    "ghcr.io/rails/devcontainer/features/activestorage": {},
+    "ghcr.io/rails/devcontainer/features/mysql-client": {}
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "Shopify.ruby-extensions-pack",
+        "testdouble.vscode-standard-ruby",
+        "manuelpuyol.erb-linter",
+        "Shopify.ruby-lsp",
+        "aki77.rails-db-schema",
+        "miguel-savignano.ruby-symbols",
+        "sibiraj-s.vscode-scss-formatter",
+        "Thadeu.vscode-run-rspec-file",
+        "Cronos87.yaml-symbols"
+      ]
+    }
+  }
+}
