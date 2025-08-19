@@ -1,9 +1,5 @@
 module Automations
   ::Integer.class_eval do
-    def between? min, max
-      self >= min && self <= max
-    end
-
     def to_hour
       "#{to_s.rjust(2, "0")}:00"
     end
