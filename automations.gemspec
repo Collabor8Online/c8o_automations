@@ -21,5 +21,5 @@ Gem::Specification.new do |spec|
 
   spec.add_dependency "rails", ">= 7.1.3.4"
   spec.add_dependency "acts_as_list", ">= 1.1.0"
-  spec.add_dependency "standard-procedure-plumbing"
+  spec.add_dependency "standard-procedure-plumbing", "< 1.0.0"
 end
